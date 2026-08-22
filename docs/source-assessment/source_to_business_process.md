@@ -1,4 +1,4 @@
-# Step 1C — Source-to-Business-Process Relationship
+# ource-to-Business-Process Relationship
 
 This section shows how upstream systems (PeopleSoft, Dataverse, SFTP) connect to the business logic that drives eBilling decisions.
 
