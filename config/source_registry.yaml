@@ -1,0 +1,376 @@
+project:
+  name: ebilling-fabric-platform
+  environment: dev
+  platform: microsoft_fabric
+  lakehouse: Ebilling_Platform_LH
+
+sources:
+
+  - source_id: PSFT-CUST
+    source_system: PeopleSoft
+    source_object: CUSTOMER
+    source_type: database_extract
+    source_domain: customer
+
+    ingestion:
+      method: file
+      format: parquet
+      frequency: daily
+      expected_volume_min: 5000
+      expected_volume_max: 20000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/peoplesoft/customer
+
+    ownership:
+      technical_owner: ERP_Data_Team
+      business_owner: Customer_Operations
+
+    keys:
+      business_key:
+        - EXTERNAL_CUST_ID
+      natural_key:
+        - EXTERNAL_CUST_ID
+      surrogate_key: null
+
+    incremental_processing:
+      timestamp_column: updated_timestamp
+      watermark_column: updated_timestamp
+      cdc_supported: simulated
+      cdc_method: timestamp
+      delete_behavior: soft_delete
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+      pii_columns:
+        - CUSTOMER_NAME
+        - ADDRESS_LINE1
+        - ADDRESS_CITY
+        - POSTCODE
+
+    target:
+      bronze_table: bronze_customer
+      silver_table: silver_customer
+
+
+  - source_id: PSFT-ORD
+    source_system: PeopleSoft
+    source_object: ORDER_HDR
+    source_type: database_extract
+    source_domain: billing
+
+    ingestion:
+      method: file
+      format: parquet
+      frequency: daily
+      expected_volume_min: 10000
+      expected_volume_max: 50000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/peoplesoft/order_hdr
+
+    ownership:
+      technical_owner: ERP_Data_Team
+      business_owner: Billing_Operations
+
+    keys:
+      business_key:
+        - EXTERNAL_REF_ID
+      natural_key:
+        - EXTERNAL_REF_ID
+      surrogate_key:
+        - ORDER_ID
+
+    relationships:
+      bill_to_column: CUSTOMER_ID
+      sold_to_column: ALT2_CUSTOMER_ID
+      customer_reference: EXTERNAL_CUST_ID
+
+    incremental_processing:
+      timestamp_column: updated_timestamp
+      watermark_column: updated_timestamp
+      cdc_supported: simulated
+      cdc_method: timestamp
+      delete_behavior: no_physical_delete
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+      pii_columns:
+        - CUSTOMER_ID
+        - ALT2_CUSTOMER_ID
+
+    target:
+      bronze_table: bronze_order_hdr
+      silver_table: silver_order_hdr
+
+
+  - source_id: DV-ACC
+    source_system: Dataverse
+    source_object: Account
+    source_type: dataverse_table
+    source_domain: customer
+
+    ingestion:
+      method: simulated_extract
+      format: parquet
+      frequency: daily
+      expected_volume_min: 5000
+      expected_volume_max: 20000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/dataverse/account
+
+    ownership:
+      technical_owner: CRM_Application_Team
+      business_owner: Customer_Management
+
+    keys:
+      business_key:
+        - account_number
+      natural_key:
+        - account_number
+      surrogate_key:
+        - dataverse_record_id
+
+    incremental_processing:
+      timestamp_column: modified_on
+      watermark_column: modified_on
+      cdc_supported: simulated
+      cdc_method: timestamp
+      delete_behavior: soft_delete
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+      pii_columns:
+        - account_name
+        - address_line1
+        - address_city
+
+    target:
+      bronze_table: bronze_account
+      silver_table: silver_account
+
+
+  - source_id: DV-DDP
+    source_system: Dataverse
+    source_object: mnpd_documentdeliverypreference
+    source_type: dataverse_table
+    source_domain: ebilling
+
+    ingestion:
+      method: simulated_extract
+      format: parquet
+      frequency: daily
+      expected_volume_min: 15000
+      expected_volume_max: 60000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/dataverse/ddp
+
+    ownership:
+      technical_owner: Ebilling_Application_Team
+      business_owner: Billing_Operations
+
+    keys:
+      business_key:
+        - account_number
+        - doc_type
+      natural_key:
+        - account_number
+        - doc_type
+      surrogate_key:
+        - dataverse_record_id
+
+    business_attributes:
+      customer_control:
+        allowed_values:
+          - Key
+          - Sub
+          - Both
+      delivery_mode:
+        allowed_values:
+          - email
+          - print
+          - ignore
+
+    incremental_processing:
+      timestamp_column: modified_on
+      watermark_column: modified_on
+      cdc_supported: simulated
+      cdc_method: timestamp
+      delete_behavior: soft_delete
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+      pii_columns:
+        - account_number
+
+    target:
+      bronze_table: bronze_ddp
+      silver_table: silver_ddp
+
+
+  - source_id: SFTP-INV
+    source_system: SFTP
+    source_object: Invoice_PDF
+    source_type: file
+    source_domain: billing
+
+    ingestion:
+      method: sftp
+      format: pdf
+      frequency: daily
+      expected_volume_min: 5000
+      expected_volume_max: 20000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/sftp/invoices
+
+    ownership:
+      technical_owner: Ebilling_Integration_Team
+      business_owner: Billing_Operations
+
+    keys:
+      business_key:
+        - invoice_number
+      natural_key:
+        - invoice_number
+      surrogate_key:
+        - file_path
+
+    incremental_processing:
+      timestamp_column: file_arrival_timestamp
+      watermark_column: file_arrival_timestamp
+      cdc_supported: false
+      cdc_method: null
+      delete_behavior: archive_after_pickup
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+
+    target:
+      bronze_table: bronze_invoice_file
+      silver_table: silver_invoice
+
+
+  - source_id: SFTP-CFRM
+    source_system: SFTP
+    source_object: Confirmation_Notice_PDF
+    source_type: file
+    source_domain: order
+
+    ingestion:
+      method: sftp
+      format: pdf
+      frequency: daily
+      expected_volume_min: 3000
+      expected_volume_max: 10000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/sftp/confirmation_notice
+
+    ownership:
+      technical_owner: Ebilling_Integration_Team
+      business_owner: Order_Operations
+
+    keys:
+      business_key:
+        - confirmation_number
+      natural_key:
+        - confirmation_number
+      surrogate_key:
+        - file_path
+
+    incremental_processing:
+      timestamp_column: file_arrival_timestamp
+      watermark_column: file_arrival_timestamp
+      cdc_supported: false
+      cdc_method: null
+      delete_behavior: archive_after_pickup
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+
+    target:
+      bronze_table: bronze_confirmation_file
+      silver_table: silver_confirmation
+
+
+  - source_id: SFTP-STMT
+    source_system: SFTP
+    source_object: Statement_PDF
+    source_type: file
+    source_domain: billing
+
+    ingestion:
+      method: sftp
+      format: pdf
+      frequency: daily
+      expected_volume_min: 500
+      expected_volume_max: 2000
+      expected_arrival_time: "06:30"
+      sla_time: "07:00"
+
+    source_location:
+      simulated: true
+      raw_path: Files/raw/sftp/statements
+
+    ownership:
+      technical_owner: Ebilling_Integration_Team
+      business_owner: Billing_Operations
+
+    keys:
+      business_key:
+        - external_cust_id
+        - statement_date
+      natural_key:
+        - external_cust_id
+        - statement_date
+      surrogate_key:
+        - file_path
+
+    incremental_processing:
+      timestamp_column: file_arrival_timestamp
+      watermark_column: file_arrival_timestamp
+      cdc_supported: false
+      cdc_method: null
+      delete_behavior: archive_after_pickup
+      late_arriving_data: supported
+
+    security:
+      classification: confidential
+      contains_pii: true
+
+    target:
+      bronze_table: bronze_statement_file
+      silver_table: silver_statement
