@@ -1,0 +1,517 @@
+project:
+  name: ebilling-fabric-platform
+  version: "1.0"
+  environment: dev
+
+sources:
+
+  # ==========================================================
+  # PEOPLESoft / BI DATA LAKE
+  # ==========================================================
+
+  - source_id: PSFT-CUST
+    source_object: CUSTOMER
+    description: "Customer master data used to resolve Bill-To and Sold-To accounts."
+
+    columns:
+
+      - name: EXTERNAL_CUST_ID
+        data_type: string
+        nullable: false
+        business_key: true
+        natural_key: true
+        pii: false
+        classification: confidential
+        description: "External customer/account identifier."
+        validation:
+          - not_null
+          - unique
+
+      - name: CUSTOMER_NAME
+        data_type: string
+        nullable: false
+        business_key: false
+        pii: true
+        classification: confidential
+        description: "Customer or account name."
+
+      - name: ADDRESS_LINE1
+        data_type: string
+        nullable: true
+        business_key: false
+        pii: true
+        classification: confidential
+        description: "Primary customer address."
+
+      - name: ADDRESS_CITY
+        data_type: string
+        nullable: true
+        business_key: false
+        pii: false
+        classification: internal
+        description: "Customer city."
+
+      - name: POSTCODE
+        data_type: string
+        nullable: true
+        business_key: false
+        pii: true
+        classification: confidential
+        description: "Customer postal code."
+
+      - name: COUNTRY
+        data_type: string
+        nullable: false
+        business_key: false
+        pii: false
+        classification: internal
+        description: "Customer country code."
+
+      - name: CUSTOMER_STATUS
+        data_type: string
+        nullable: false
+        business_key: false
+        pii: false
+        classification: internal
+        allowed_values:
+          - ACTIVE
+          - INACTIVE
+        description: "Current customer status."
+
+      - name: created_timestamp
+        data_type: timestamp
+        nullable: false
+        business_key: false
+        pii: false
+        classification: internal
+        description: "Source record creation timestamp."
+
+      - name: updated_timestamp
+        data_type: timestamp
+        nullable: false
+        business_key: false
+        watermark: true
+        pii: false
+        classification: internal
+        description: "Last source record modification timestamp."
+
+
+  # ==========================================================
+  # PEOPLESoft / BI DATA LAKE
+  # ==========================================================
+
+  - source_id: PSFT-ORD
+    source_object: ORDER_HDR
+    description: "Order/invoice header used to identify Bill-To and Sold-To relationships."
+
+    columns:
+
+      - name: EXTERNAL_REF_ID
+        data_type: string
+        nullable: false
+        business_key: true
+        natural_key: true
+        pii: false
+        classification: confidential
+        description: "External invoice or confirmation reference."
+        validation:
+          - not_null
+          - unique
+
+      - name: ORDER_ID
+        data_type: string
+        nullable: false
+        business_key: false
+        surrogate_key: true
+        pii: false
+        classification: internal
+        description: "Technical order identifier."
+
+      - name: CUSTOMER_ID
+        data_type: string
+        nullable: false
+        business_key: false
+        foreign_key:
+          source_id: PSFT-CUST
+          column: EXTERNAL_CUST_ID
+        pii: true
+        classification: confidential
+        description: "Bill-To customer reference."
+
+      - name: ALT2_CUSTOMER_ID
+        data_type: string
+        nullable: false
+        business_key: false
+        foreign_key:
+          source_id: PSFT-CUST
+          column: EXTERNAL_CUST_ID
+        pii: true
+        classification: confidential
+        description: "Sold-To customer reference."
+
+      - name: ORDER_TOTAL
+        data_type: decimal
+        nullable: false
+        business_key: false
+        pii: false
+        classification: confidential
+        description: "Total order/invoice value."
+
+      - name: PAYMENT_STATUS
+        data_type: string
+        nullable: false
+        business_key: false
+        pii: false
+        classification: internal
+        allowed_values:
+          - PAID
+          - UNPAID
+        description: "Payment status."
+
+      - name: created_timestamp
+        data_type: timestamp
+        nullable: false
+        business_key: false
+        pii: false
+        classification: internal
+
+      - name: updated_timestamp
+        data_type: timestamp
+        nullable: false
+        watermark: true
+        business_key: false
+        pii: false
+        classification: internal
+
+
+  # ==========================================================
+  # DATAVERSE ACCOUNT
+  # ==========================================================
+
+  - source_id: DV-ACC
+    source_object: Account
+    description: "Dataverse customer/account master."
+
+    columns:
+
+      - name: dataverse_record_id
+        data_type: string
+        nullable: false
+        business_key: false
+        surrogate_key: true
+        pii: false
+        classification: internal
+
+      - name: account_number
+        data_type: string
+        nullable: false
+        business_key: true
+        natural_key: true
+        pii: false
+        classification: confidential
+        validation:
+          - not_null
+          - unique
+
+      - name: account_name
+        data_type: string
+        nullable: false
+        pii: true
+        classification: confidential
+
+      - name: account_status
+        data_type: string
+        nullable: false
+        pii: false
+        classification: internal
+        allowed_values:
+          - ACTIVE
+          - INACTIVE
+
+      - name: address_line1
+        data_type: string
+        nullable: true
+        pii: true
+        classification: confidential
+
+      - name: address_city
+        data_type: string
+        nullable: true
+        pii: false
+        classification: internal
+
+      - name: postcode
+        data_type: string
+        nullable: true
+        pii: true
+        classification: confidential
+
+      - name: created_on
+        data_type: timestamp
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: modified_on
+        data_type: timestamp
+        nullable: false
+        watermark: true
+        pii: false
+        classification: internal
+
+
+  # ==========================================================
+  # DATAVERSE DDP
+  # ==========================================================
+
+  - source_id: DV-DDP
+    source_object: mnpd_documentdeliverypreference
+    description: "Customer document delivery preferences."
+
+    columns:
+
+      - name: dataverse_record_id
+        data_type: string
+        nullable: false
+        surrogate_key: true
+        pii: false
+        classification: internal
+
+      - name: account_number
+        data_type: string
+        nullable: false
+        business_key: true
+        pii: true
+        classification: confidential
+        foreign_key:
+          source_id: DV-ACC
+          column: account_number
+
+      - name: doc_type
+        data_type: string
+        nullable: false
+        business_key: true
+        pii: false
+        classification: internal
+        allowed_values:
+          - invoice
+          - confirmation
+          - statement
+
+      - name: customer_control
+        data_type: string
+        nullable: true
+        pii: false
+        classification: internal
+        allowed_values:
+          - Key
+          - Sub
+          - Both
+        description: "Determines which customer account receives the document."
+
+      - name: delivery_mode
+        data_type: string
+        nullable: true
+        pii: false
+        classification: internal
+        allowed_values:
+          - email
+          - print
+          - ignore
+        description: "Requested document delivery method."
+
+      - name: is_active
+        data_type: boolean
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: effective_from
+        data_type: date
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: effective_to
+        data_type: date
+        nullable: true
+        pii: false
+        classification: internal
+
+      - name: created_on
+        data_type: timestamp
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: modified_on
+        data_type: timestamp
+        nullable: false
+        watermark: true
+        pii: false
+        classification: internal
+
+
+  # ==========================================================
+  # SFTP INVOICE
+  # ==========================================================
+
+  - source_id: SFTP-INV
+    source_object: Invoice_PDF
+    description: "Invoice PDF files received from the upstream SFTP location."
+
+    columns:
+
+      - name: file_name
+        data_type: string
+        nullable: false
+        business_key: false
+        technical_key: true
+        pii: false
+        classification: confidential
+
+      - name: file_path
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: confidential
+
+      - name: invoice_number
+        data_type: string
+        nullable: false
+        business_key: true
+        pii: false
+        classification: confidential
+
+      - name: file_size_bytes
+        data_type: long
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: file_arrival_timestamp
+        data_type: timestamp
+        nullable: false
+        watermark: true
+        pii: false
+        classification: internal
+
+      - name: source_file_hash
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: internal
+        description: "Hash used for duplicate/idempotency detection."
+
+
+  # ==========================================================
+  # SFTP CONFIRMATION
+  # ==========================================================
+
+  - source_id: SFTP-CFRM
+    source_object: Confirmation_Notice_PDF
+    description: "Confirmation notice PDF received from SFTP."
+
+    columns:
+
+      - name: file_name
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: confidential
+
+      - name: file_path
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: confidential
+
+      - name: confirmation_number
+        data_type: string
+        nullable: false
+        business_key: true
+        pii: false
+        classification: confidential
+
+      - name: file_size_bytes
+        data_type: long
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: file_arrival_timestamp
+        data_type: timestamp
+        nullable: false
+        watermark: true
+        pii: false
+        classification: internal
+
+      - name: source_file_hash
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: internal
+
+
+  # ==========================================================
+  # SFTP STATEMENT
+  # ==========================================================
+
+  - source_id: SFTP-STMT
+    source_object: Statement_PDF
+    description: "Customer statement PDF received from SFTP."
+
+    columns:
+
+      - name: file_name
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: confidential
+
+      - name: file_path
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: confidential
+
+      - name: external_cust_id
+        data_type: string
+        nullable: false
+        business_key: true
+        pii: true
+        classification: confidential
+
+      - name: statement_date
+        data_type: date
+        nullable: false
+        business_key: true
+        pii: false
+        classification: confidential
+
+      - name: file_size_bytes
+        data_type: long
+        nullable: false
+        pii: false
+        classification: internal
+
+      - name: file_arrival_timestamp
+        data_type: timestamp
+        nullable: false
+        watermark: true
+        pii: false
+        classification: internal
+
+      - name: source_file_hash
+        data_type: string
+        nullable: false
+        technical_key: true
+        pii: false
+        classification: internal
