@@ -1,0 +1,347 @@
+project:
+  name: ebilling-fabric-platform
+  version: "1.0"
+  environment: dev
+
+document_types:
+  invoice:
+    source: SFTP-INV
+    control_source: DV-DDP
+    account_reference: bill_to_account
+
+  confirmation:
+    source: SFTP-CFRM
+    control_source: DV-DDP
+    account_reference: sold_to_account
+
+  statement:
+    source: SFTP-STMT
+    control_source: DV-DDP
+    account_reference: bill_to_account
+
+
+customer_control_rules:
+
+  Key:
+    description: "Document is addressed to the Bill-To/Key account"
+    invoice:
+      output_accounts:
+        - bill_to_account
+    confirmation:
+      output_accounts:
+        - bill_to_account
+
+  Sub:
+    description: "Document is addressed to the Sold-To/Sub account"
+    invoice:
+      output_accounts:
+        - sold_to_account
+    confirmation:
+      output_accounts:
+        - sold_to_account
+
+  Both:
+    description: "Document is produced for both Bill-To and Sold-To accounts"
+    invoice:
+      output_accounts:
+        - bill_to_account
+        - sold_to_account
+    confirmation:
+      output_accounts:
+        - bill_to_account
+        - sold_to_account
+
+
+delivery_rules:
+
+  email:
+    processing_status: PASSED
+    destination: sidetrade
+    delivery_method: email
+
+  print:
+    processing_status: PASSED
+    destination: sidetrade
+    delivery_method: print
+
+  ignore:
+    processing_status: IGNORED
+    destination: ignored
+
+  null:
+    processing_status: FAILED
+    destination: failed
+
+
+failure_rules:
+
+  missing_customer_control:
+    condition: "customer_control IS NULL"
+    status: FAILED
+    reason: "NO_CUSTOMER_CONTROL_MATRIX"
+    destination: failed
+
+  missing_delivery_mode:
+    condition: "delivery_mode IS NULL"
+    status: FAILED
+    reason: "NO_DELIVERY_MODE"
+    destination: failed
+
+  missing_customer:
+    condition: "customer lookup fails"
+    status: FAILED
+    reason: "CUSTOMER_NOT_FOUND"
+    destination: failed
+
+  missing_order:
+    condition: "ORDER_HDR lookup fails"
+    status: FAILED
+    reason: "ORDER_NOT_FOUND"
+    destination: failed
+
+  invalid_customer_control:
+    condition: "customer_control NOT IN (Key, Sub, Both)"
+    status: FAILED
+    reason: "INVALID_CUSTOMER_CONTROL"
+    destination: failed
+
+  invalid_delivery_mode:
+    condition: "delivery_mode NOT IN (email, print, ignore)"
+    status: FAILED
+    reason: "INVALID_DELIVERY_MODE"
+    destination: failed
+
+
+file_naming_rules:
+
+  invoice:
+    key:
+      pattern: "kaltire_invoice_{bill_to_account}.pdf"
+    sub:
+      pattern: "kaltire_invoice_{sold_to_account}.pdf"
+    both:
+      patterns:
+        - "kaltire_invoice_{bill_to_account}.pdf"
+        - "kaltire_invoice_{sold_to_account}.pdf"
+
+  confirmation:
+    key:
+      pattern: "kaltire_cfrm_{confirmation_number}_{bill_to_account}.pdf"
+    sub:
+      pattern: "kaltire_cfrm_{confirmation_number}_{sold_to_account}.pdf"
+    both:
+      patterns:
+        - "kaltire_cfrm_{confirmation_number}_{bill_to_account}.pdf"
+        - "kaltire_cfrm_{confirmation_number}_{sold_to_account}.pdf"
+
+
+folder_rules:
+
+  invoice:
+    root: "ebilling/invoices"
+
+  confirmation:
+    root: "ebilling/confirmationnotice"
+
+  statement:
+    root: "ebilling/statements"
+
+  date_format: "yyyy-MM-dd"
+
+  passed:
+    folder: "passed"
+
+  failed:
+    folder: "Failed"
+
+  ignored:
+    folder: "Ignored"
+
+
+processing_rules:
+
+  daily_schedule:
+    enabled: true
+    scheduled_time: "07:00"
+
+  idempotency:
+    enabled: true
+    business_keys:
+      invoice:
+        - invoice_number
+        - output_account
+      confirmation:
+        - confirmation_number
+        - output_account
+      statement:
+        - external_cust_id
+        - statement_date
+
+  duplicate_handling:
+    action: quarantine
+    reason: DUPLICATE_DOCUMENT
+
+  late_arriving_data:
+    enabled: true
+    action: process
+    audit_original_arrival_timestamp: true
+
+  failed_processing:
+    retry_enabled: true
+    max_retry_attempts: 3
+    quarantine_after_max_retry: true
+
+
+test_scenarios:
+
+  - scenario_id: TC001
+    name: "Invoice Key Email"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 1
+
+  - scenario_id: TC002
+    name: "Invoice Sub Email"
+    document_type: invoice
+    customer_control: Sub
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 1
+
+  - scenario_id: TC003
+    name: "Invoice Both Email"
+    document_type: invoice
+    customer_control: Both
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 2
+
+  - scenario_id: TC004
+    name: "Invoice Key Print"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: print
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 1
+
+  - scenario_id: TC005
+    name: "Invoice Ignore"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: ignore
+    bill_to_equals_sold_to: false
+    expected_status: IGNORED
+    expected_output_count: 0
+
+  - scenario_id: TC006
+    name: "Invoice Missing Delivery Mode"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: null
+    bill_to_equals_sold_to: false
+    expected_status: FAILED
+    expected_output_count: 0
+
+  - scenario_id: TC007
+    name: "Invoice Missing Customer Control"
+    document_type: invoice
+    customer_control: null
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: FAILED
+    expected_output_count: 0
+
+  - scenario_id: TC008
+    name: "Confirmation Key Email"
+    document_type: confirmation
+    customer_control: Key
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 1
+
+  - scenario_id: TC009
+    name: "Confirmation Sub Email"
+    document_type: confirmation
+    customer_control: Sub
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 1
+
+  - scenario_id: TC010
+    name: "Confirmation Both Email"
+    document_type: confirmation
+    customer_control: Both
+    delivery_mode: email
+    bill_to_equals_sold_to: false
+    expected_status: PASSED
+    expected_output_count: 2
+
+  - scenario_id: TC011
+    name: "Bill-To Equals Sold-To"
+    document_type: invoice
+    customer_control: Both
+    delivery_mode: email
+    bill_to_equals_sold_to: true
+    expected_status: PASSED
+    expected_output_count: 1
+    expected_behavior: "Prevent duplicate output for same account"
+
+  - scenario_id: TC012
+    name: "Missing Customer"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: email
+    customer_exists: false
+    expected_status: FAILED
+    expected_reason: CUSTOMER_NOT_FOUND
+
+  - scenario_id: TC013
+    name: "Missing ORDER_HDR"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: email
+    order_exists: false
+    expected_status: FAILED
+    expected_reason: ORDER_NOT_FOUND
+
+  - scenario_id: TC014
+    name: "Duplicate Invoice"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: email
+    duplicate_source_file: true
+    expected_status: FAILED
+    expected_reason: DUPLICATE_DOCUMENT
+
+  - scenario_id: TC015
+    name: "Late Arriving Invoice"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: email
+    late_arrival: true
+    expected_status: PASSED
+    expected_behavior: "Process using event timestamp while retaining arrival timestamp"
+
+  - scenario_id: TC016
+    name: "Invalid Customer Control"
+    document_type: invoice
+    customer_control: INVALID
+    delivery_mode: email
+    expected_status: FAILED
+    expected_reason: INVALID_CUSTOMER_CONTROL
+
+  - scenario_id: TC017
+    name: "Invalid Delivery Mode"
+    document_type: invoice
+    customer_control: Key
+    delivery_mode: INVALID
+    expected_status: FAILED
+    expected_reason: INVALID_DELIVERY_MODE
