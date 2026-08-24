@@ -1,0 +1,413 @@
+project:
+  name: ebilling-fabric-platform
+  version: "1.0"
+
+mappings:
+
+  # ==========================================================
+  # CUSTOMER
+  # ==========================================================
+
+  - mapping_id: MAP-CUST-001
+    source_id: PSFT-CUST
+    source_object: CUSTOMER
+    source_column: EXTERNAL_CUST_ID
+
+    bronze:
+      table: bronze_customer
+      column: external_cust_id
+      transformation: rename
+
+    silver:
+      table: silver_customer
+      column: customer_account
+      transformation: rename
+
+    business_usage:
+      - bill_to_account
+      - sold_to_account
+      - customer_lookup
+
+  - mapping_id: MAP-CUST-002
+    source_id: PSFT-CUST
+    source_object: CUSTOMER
+    source_column: CUSTOMER_NAME
+
+    bronze:
+      table: bronze_customer
+      column: customer_name
+      transformation: rename
+
+    silver:
+      table: silver_customer
+      column: customer_name
+      transformation: trim_and_standardise
+
+  - mapping_id: MAP-CUST-003
+    source_id: PSFT-CUST
+    source_object: CUSTOMER
+    source_column: ADDRESS_CITY
+
+    bronze:
+      table: bronze_customer
+      column: address_city
+      transformation: rename
+
+    silver:
+      table: silver_customer
+      column: city
+      transformation: trim_and_uppercase
+
+  - mapping_id: MAP-CUST-004
+    source_id: PSFT-CUST
+    source_object: CUSTOMER
+    source_column: CUSTOMER_STATUS
+
+    bronze:
+      table: bronze_customer
+      column: customer_status
+      transformation: rename
+
+    silver:
+      table: silver_customer
+      column: customer_status
+      transformation: standardise_status
+
+
+  # ==========================================================
+  # ORDER HEADER
+  # ==========================================================
+
+  - mapping_id: MAP-ORD-001
+    source_id: PSFT-ORD
+    source_object: ORDER_HDR
+    source_column: EXTERNAL_REF_ID
+
+    bronze:
+      table: bronze_order_hdr
+      column: external_ref_id
+      transformation: rename
+
+    silver:
+      table: silver_order_hdr
+      column: document_number
+      transformation: rename
+
+    business_usage:
+      - invoice_number
+      - confirmation_number
+
+  - mapping_id: MAP-ORD-002
+    source_id: PSFT-ORD
+    source_object: ORDER_HDR
+    source_column: ORDER_ID
+
+    bronze:
+      table: bronze_order_hdr
+      column: order_id
+      transformation: rename
+
+    silver:
+      table: silver_order_hdr
+      column: source_order_id
+      transformation: rename
+
+  - mapping_id: MAP-ORD-003
+    source_id: PSFT-ORD
+    source_object: ORDER_HDR
+    source_column: CUSTOMER_ID
+
+    bronze:
+      table: bronze_order_hdr
+      column: customer_id
+      transformation: rename
+
+    silver:
+      table: silver_order_hdr
+      column: bill_to_account
+      transformation: customer_lookup
+
+    business_usage:
+      - invoice_bill_to
+      - confirmation_bill_to
+
+  - mapping_id: MAP-ORD-004
+    source_id: PSFT-ORD
+    source_object: ORDER_HDR
+    source_column: ALT2_CUSTOMER_ID
+
+    bronze:
+      table: bronze_order_hdr
+      column: alt2_customer_id
+      transformation: rename
+
+    silver:
+      table: silver_order_hdr
+      column: sold_to_account
+      transformation: customer_lookup
+
+    business_usage:
+      - invoice_sold_to
+      - confirmation_sold_to
+
+  - mapping_id: MAP-ORD-005
+    source_id: PSFT-ORD
+    source_object: ORDER_HDR
+    source_column: ORDER_TOTAL
+
+    bronze:
+      table: bronze_order_hdr
+      column: order_total
+      transformation: cast_decimal
+
+    silver:
+      table: silver_order_hdr
+      column: order_total
+      transformation: cast_decimal
+
+
+  # ==========================================================
+  # DATAVERSE ACCOUNT
+  # ==========================================================
+
+  - mapping_id: MAP-ACC-001
+    source_id: DV-ACC
+    source_object: Account
+    source_column: dataverse_record_id
+
+    bronze:
+      table: bronze_account
+      column: dataverse_record_id
+      transformation: rename
+
+    silver:
+      table: silver_account
+      column: account_surrogate_key
+      transformation: rename
+
+  - mapping_id: MAP-ACC-002
+    source_id: DV-ACC
+    source_object: Account
+    source_column: account_number
+
+    bronze:
+      table: bronze_account
+      column: account_number
+      transformation: trim
+
+    silver:
+      table: silver_account
+      column: account_number
+      transformation: trim_and_uppercase
+
+    business_usage:
+      - ddp_join
+      - customer_reference
+
+  - mapping_id: MAP-ACC-003
+    source_id: DV-ACC
+    source_object: Account
+    source_column: account_name
+
+    bronze:
+      table: bronze_account
+      column: account_name
+      transformation: rename
+
+    silver:
+      table: silver_account
+      column: account_name
+      transformation: trim
+
+
+  # ==========================================================
+  # DATAVERSE DDP
+  # ==========================================================
+
+  - mapping_id: MAP-DDP-001
+    source_id: DV-DDP
+    source_object: mnpd_documentdeliverypreference
+    source_column: account_number
+
+    bronze:
+      table: bronze_ddp
+      column: account_number
+      transformation: trim
+
+    silver:
+      table: silver_ddp
+      column: account_number
+      transformation: trim_and_uppercase
+
+  - mapping_id: MAP-DDP-002
+    source_id: DV-DDP
+    source_object: mnpd_documentdeliverypreference
+    source_column: doc_type
+
+    bronze:
+      table: bronze_ddp
+      column: doc_type
+      transformation: lowercase
+
+    silver:
+      table: silver_ddp
+      column: document_type
+      transformation: standardise_document_type
+
+  - mapping_id: MAP-DDP-003
+    source_id: DV-DDP
+    source_object: mnpd_documentdeliverypreference
+    source_column: customer_control
+
+    bronze:
+      table: bronze_ddp
+      column: customer_control
+      transformation: rename
+
+    silver:
+      table: silver_ddp
+      column: customer_control
+      transformation: standardise_customer_control
+
+  - mapping_id: MAP-DDP-004
+    source_id: DV-DDP
+    source_object: mnpd_documentdeliverypreference
+    source_column: delivery_mode
+
+    bronze:
+      table: bronze_ddp
+      column: delivery_mode
+      transformation: lowercase
+
+    silver:
+      table: silver_ddp
+      column: delivery_mode
+      transformation: standardise_delivery_mode
+
+
+  # ==========================================================
+  # INVOICE FILE
+  # ==========================================================
+
+  - mapping_id: MAP-INV-001
+    source_id: SFTP-INV
+    source_object: Invoice_PDF
+    source_column: file_name
+
+    bronze:
+      table: bronze_invoice_file
+      column: source_file_name
+      transformation: rename
+
+    silver:
+      table: silver_invoice
+      column: source_file_name
+      transformation: rename
+
+  - mapping_id: MAP-INV-002
+    source_id: SFTP-INV
+    source_object: Invoice_PDF
+    source_column: file_path
+
+    bronze:
+      table: bronze_invoice_file
+      column: source_file_path
+      transformation: rename
+
+    silver:
+      table: silver_invoice
+      column: source_file_path
+      transformation: rename
+
+  - mapping_id: MAP-INV-003
+    source_id: SFTP-INV
+    source_object: Invoice_PDF
+    source_column: invoice_number
+
+    bronze:
+      table: bronze_invoice_file
+      column: invoice_number
+      transformation: rename
+
+    silver:
+      table: silver_invoice
+      column: invoice_number
+      transformation: trim_and_uppercase
+
+    business_usage:
+      - order_hdr_join
+      - idempotency_key
+
+
+  # ==========================================================
+  # CONFIRMATION FILE
+  # ==========================================================
+
+  - mapping_id: MAP-CFRM-001
+    source_id: SFTP-CFRM
+    source_object: Confirmation_Notice_PDF
+    source_column: file_name
+
+    bronze:
+      table: bronze_confirmation_file
+      column: source_file_name
+      transformation: rename
+
+    silver:
+      table: silver_confirmation
+      column: source_file_name
+      transformation: rename
+
+  - mapping_id: MAP-CFRM-002
+    source_id: SFTP-CFRM
+    source_object: Confirmation_Notice_PDF
+    source_column: confirmation_number
+
+    bronze:
+      table: bronze_confirmation_file
+      column: confirmation_number
+      transformation: rename
+
+    silver:
+      table: silver_confirmation
+      column: confirmation_number
+      transformation: trim_and_uppercase
+
+    business_usage:
+      - order_hdr_join
+      - idempotency_key
+
+
+  # ==========================================================
+  # STATEMENT FILE
+  # ==========================================================
+
+  - mapping_id: MAP-STMT-001
+    source_id: SFTP-STMT
+    source_object: Statement_PDF
+    source_column: external_cust_id
+
+    bronze:
+      table: bronze_statement_file
+      column: external_cust_id
+      transformation: trim_and_uppercase
+
+    silver:
+      table: silver_statement
+      column: customer_account
+      transformation: rename
+
+  - mapping_id: MAP-STMT-002
+    source_id: SFTP-STMT
+    source_object: Statement_PDF
+    source_column: statement_date
+
+    bronze:
+      table: bronze_statement_file
+      column: statement_date
+      transformation: cast_date
+
+    silver:
+      table: silver_statement
+      column: statement_date
+      transformation: cast_date
