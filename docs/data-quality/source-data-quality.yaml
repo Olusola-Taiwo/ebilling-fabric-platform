@@ -1,0 +1,491 @@
+project:
+  name: ebilling-fabric-platform
+  version: "1.0"
+  environment: dev
+
+quality_framework:
+  severity_levels:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+    - LOW
+
+  actions:
+    CRITICAL: QUARANTINE
+    HIGH: QUARANTINE
+    MEDIUM: FLAG
+    LOW: AUDIT
+
+
+# ============================================================
+# CUSTOMER
+# ============================================================
+
+rules:
+
+  - rule_id: DQ-CUST-001
+    source_id: PSFT-CUST
+    object: CUSTOMER
+    column: EXTERNAL_CUST_ID
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+    description: "Customer account identifier must not be null."
+
+  - rule_id: DQ-CUST-002
+    source_id: PSFT-CUST
+    object: CUSTOMER
+    column: EXTERNAL_CUST_ID
+    rule_type: UNIQUE
+    severity: CRITICAL
+    action: QUARANTINE
+    description: "Customer account identifier must be unique."
+
+  - rule_id: DQ-CUST-003
+    source_id: PSFT-CUST
+    object: CUSTOMER
+    column: CUSTOMER_STATUS
+    rule_type: DOMAIN
+    allowed_values:
+      - ACTIVE
+      - INACTIVE
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-CUST-004
+    source_id: PSFT-CUST
+    object: CUSTOMER
+    column: COUNTRY
+    rule_type: NOT_NULL
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-CUST-005
+    source_id: PSFT-CUST
+    object: CUSTOMER
+    column: updated_timestamp
+    rule_type: NOT_NULL
+    severity: HIGH
+    action: QUARANTINE
+
+
+# ============================================================
+# ORDER HEADER
+# ============================================================
+
+  - rule_id: DQ-ORD-001
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: EXTERNAL_REF_ID
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ORD-002
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: EXTERNAL_REF_ID
+    rule_type: UNIQUE
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ORD-003
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: CUSTOMER_ID
+    rule_type: REFERENTIAL_INTEGRITY
+    reference:
+      source_id: PSFT-CUST
+      column: EXTERNAL_CUST_ID
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ORD-004
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: ALT2_CUSTOMER_ID
+    rule_type: REFERENTIAL_INTEGRITY
+    reference:
+      source_id: PSFT-CUST
+      column: EXTERNAL_CUST_ID
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ORD-005
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: ORDER_TOTAL
+    rule_type: NON_NEGATIVE
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-ORD-006
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: PAYMENT_STATUS
+    rule_type: DOMAIN
+    allowed_values:
+      - PAID
+      - UNPAID
+    severity: MEDIUM
+    action: FLAG
+
+  - rule_id: DQ-ORD-007
+    source_id: PSFT-ORD
+    object: ORDER_HDR
+    column: updated_timestamp
+    rule_type: NOT_NULL
+    severity: HIGH
+    action: QUARANTINE
+
+
+# ============================================================
+# DATAVERSE ACCOUNT
+# ============================================================
+
+  - rule_id: DQ-ACC-001
+    source_id: DV-ACC
+    object: Account
+    column: dataverse_record_id
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ACC-002
+    source_id: DV-ACC
+    object: Account
+    column: account_number
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ACC-003
+    source_id: DV-ACC
+    object: Account
+    column: account_number
+    rule_type: UNIQUE
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-ACC-004
+    source_id: DV-ACC
+    object: Account
+    column: account_status
+    rule_type: DOMAIN
+    allowed_values:
+      - ACTIVE
+      - INACTIVE
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-ACC-005
+    source_id: DV-ACC
+    object: Account
+    column: modified_on
+    rule_type: NOT_NULL
+    severity: HIGH
+    action: QUARANTINE
+
+
+# ============================================================
+# DATAVERSE DDP
+# ============================================================
+
+  - rule_id: DQ-DDP-001
+    source_id: DV-DDP
+    object: mnpd_documentdeliverypreference
+    column: account_number
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-DDP-002
+    source_id: DV-DDP
+    object: mnpd_documentdeliverypreference
+    column: doc_type
+    rule_type: DOMAIN
+    allowed_values:
+      - invoice
+      - confirmation
+      - statement
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-DDP-003
+    source_id: DV-DDP
+    object: mnpd_documentdeliverypreference
+    column: customer_control
+    rule_type: DOMAIN
+    allowed_values:
+      - Key
+      - Sub
+      - Both
+    nullable: true
+    severity: HIGH
+    action: FLAG
+
+  - rule_id: DQ-DDP-004
+    source_id: DV-DDP
+    object: mnpd_documentdeliverypreference
+    column: delivery_mode
+    rule_type: DOMAIN
+    allowed_values:
+      - email
+      - print
+      - ignore
+    nullable: true
+    severity: HIGH
+    action: FLAG
+
+  - rule_id: DQ-DDP-005
+    source_id: DV-DDP
+    object: mnpd_documentdeliverypreference
+    columns:
+      - account_number
+      - doc_type
+    rule_type: COMPOSITE_UNIQUE
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-DDP-006
+    source_id: DV-DDP
+    object: mnpd_documentdeliverypreference
+    column: account_number
+    rule_type: REFERENTIAL_INTEGRITY
+    reference:
+      source_id: DV-ACC
+      column: account_number
+    severity: CRITICAL
+    action: QUARANTINE
+
+
+# ============================================================
+# INVOICE FILES
+# ============================================================
+
+  - rule_id: DQ-INV-001
+    source_id: SFTP-INV
+    object: Invoice_PDF
+    column: file_name
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-INV-002
+    source_id: SFTP-INV
+    object: Invoice_PDF
+    column: invoice_number
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-INV-003
+    source_id: SFTP-INV
+    object: Invoice_PDF
+    column: invoice_number
+    rule_type: REFERENTIAL_INTEGRITY
+    reference:
+      source_id: PSFT-ORD
+      column: EXTERNAL_REF_ID
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-INV-004
+    source_id: SFTP-INV
+    object: Invoice_PDF
+    column: file_name
+    rule_type: FILE_EXTENSION
+    expected: ".pdf"
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-INV-005
+    source_id: SFTP-INV
+    object: Invoice_PDF
+    column: source_file_hash
+    rule_type: NOT_NULL
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-INV-006
+    source_id: SFTP-INV
+    object: Invoice_PDF
+    column: source_file_hash
+    rule_type: DUPLICATE_DETECTION
+    severity: HIGH
+    action: QUARANTINE
+
+
+# ============================================================
+# CONFIRMATION FILES
+# ============================================================
+
+  - rule_id: DQ-CFRM-001
+    source_id: SFTP-CFRM
+    object: Confirmation_Notice_PDF
+    column: confirmation_number
+    rule_type: NOT_NULL
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-CFRM-002
+    source_id: SFTP-CFRM
+    object: Confirmation_Notice_PDF
+    column: file_name
+    rule_type: FILE_EXTENSION
+    expected: ".pdf"
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-CFRM-003
+    source_id: SFTP-CFRM
+    object: Confirmation_Notice_PDF
+    column: source_file_hash
+    rule_type: DUPLICATE_DETECTION
+    severity: HIGH
+    action: QUARANTINE
+
+
+# ============================================================
+# STATEMENTS
+# ============================================================
+
+  - rule_id: DQ-STMT-001
+    source_id: SFTP-STMT
+    object: Statement_PDF
+    column: external_cust_id
+    rule_type: REFERENTIAL_INTEGRITY
+    reference:
+      source_id: PSFT-CUST
+      column: EXTERNAL_CUST_ID
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: DQ-STMT-002
+    source_id: SFTP-STMT
+    object: Statement_PDF
+    columns:
+      - external_cust_id
+      - statement_date
+    rule_type: COMPOSITE_UNIQUE
+    severity: HIGH
+    action: QUARANTINE
+
+  - rule_id: DQ-STMT-003
+    source_id: SFTP-STMT
+    object: Statement_PDF
+    column: file_name
+    rule_type: FILE_EXTENSION
+    expected: ".pdf"
+    severity: HIGH
+    action: QUARANTINE
+
+
+# ============================================================
+# CROSS-SOURCE BUSINESS RULES
+# ============================================================
+
+cross_source_rules:
+
+  - rule_id: XSR-001
+    name: InvoiceMustHaveOrder
+    condition: "invoice.invoice_number = order_hdr.EXTERNAL_REF_ID"
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: XSR-002
+    name: BillToMustExist
+    condition: "order_hdr.CUSTOMER_ID exists in CUSTOMER.EXTERNAL_CUST_ID"
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: XSR-003
+    name: SoldToMustExist
+    condition: "order_hdr.ALT2_CUSTOMER_ID exists in CUSTOMER.EXTERNAL_CUST_ID"
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: XSR-004
+    name: InvoiceDDPResolution
+    condition: "invoice uses Bill-To account to resolve DDP"
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: XSR-005
+    name: ConfirmationDDPResolution
+    condition: "confirmation uses Sold-To account to resolve DDP"
+    severity: CRITICAL
+    action: QUARANTINE
+
+  - rule_id: XSR-006
+    name: BothMustNotDuplicateSameAccount
+    condition: "Bill-To = Sold-To must result in one output PDF"
+    severity: HIGH
+    action: FLAG
+
+
+# ============================================================
+# VOLUME / FRESHNESS
+# ============================================================
+
+operational_quality:
+
+  expected_daily_volume:
+
+    customer:
+      min: 5000
+      max: 20000
+
+    order_hdr:
+      min: 10000
+      max: 50000
+
+    invoices:
+      min: 5000
+      max: 20000
+
+    confirmations:
+      min: 3000
+      max: 10000
+
+    statements:
+      min: 500
+      max: 2000
+
+  freshness:
+
+    source_arrival_time: "06:30"
+
+    processing_start_time: "07:00"
+
+    target_completion_time: "08:00"
+
+    freshness_sla_minutes: 90
+
+
+# ============================================================
+# DATA QUALITY METRICS
+# ============================================================
+
+quality_metrics:
+
+  completeness:
+    threshold_percent: 99.5
+
+  uniqueness:
+    threshold_percent: 99.9
+
+  referential_integrity:
+    threshold_percent: 99.9
+
+  validity:
+    threshold_percent: 99.5
+
+  duplicate_rate:
+    maximum_percent: 0.1
+
+  failed_records:
+    action: alert
+
+  critical_rule_failure:
+    action: stop_pipeline
